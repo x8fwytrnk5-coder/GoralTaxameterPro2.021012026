@@ -278,6 +278,13 @@
 </head>
 
 <body>
+	
+	<div id="login-screen" style="display:none;">
+  <h2>Zadajte telefónne číslo</h2>
+  <input id="phone-input" type="text" placeholder="0900 000 000">
+  <button onclick="savePhone()">Pokračovať</button>
+</div>
+	
 <div class="app">
 
   <!-- HLAVIČKA -->
@@ -783,6 +790,7 @@ document.getElementById("btnNavigate").onclick = () => {
 };
 
 
+
 // ======================
 // GPS ZAMERANIE
 // ======================
@@ -1046,6 +1054,72 @@ renderTariffs();
 renderActiveTariffSelector();
 updateDisplays();
 </script>
+
+<script src="autocomplete.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = 'https://jjiqkmfcicylmojofnic.supabase.co/';
+  const SUPABASE_KEY = 'sb_publishable_gAQ0kXMu4xKDEXFG_z562A_g6SWzJ4H';
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const savedPhone = localStorage.getItem("user_phone");
+
+    if (!savedPhone) {
+      document.getElementById("login-screen").style.display = "block";
+    } else {
+      verifyUser(savedPhone);
+    }
+  });
+
+  function savePhone() {
+    const phone = document.getElementById("phone-input").value;
+    localStorage.setItem("user_phone", phone);
+    verifyUser(phone);
+  }
+
+  async function verifyUser(phone) {
+    const imei = "TEST_IMEI_12345"; // dočasné
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("phone", phone)
+      .single();
+
+    if (error || !data) {
+      alert("Užívateľ neexistuje");
+      return;
+    }
+
+    if (data.status === "blocked") {
+      alert("Prístup zamietnutý");
+      return;
+    }
+
+    if (!data.imei) {
+      await supabase
+        .from("users")
+        .update({ imei: imei })
+        .eq("phone", phone);
+
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      return;
+    }
+
+    if (data.imei !== imei) {
+      alert("Toto číslo je už používané na inom zariadení");
+      return;
+    }
+
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+  }
+</script>
+
 
 
 
