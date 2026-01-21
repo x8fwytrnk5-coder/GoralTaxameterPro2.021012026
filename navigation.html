@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<title>Navigácia</title>
+
+<script src="https://api.mapy.cz/loader.js"></script>
+<script>
+  Loader.load(null, {poi:true});
+</script>
+
+<style>
+  body { margin:0; padding:0; }
+  #map { width:100vw; height:100vh; }
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script>
+// Načítanie dát z URL
+const params = new URLSearchParams(window.location.search);
+const data = JSON.parse(params.get("data"));
+
+// Geokódovanie
+async function geocode(addr) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!j.length) throw new Error("Adresa nenájdená");
+  return SMap.Coords.fromWGS84(j[0].lon, j[0].lat);
+}
+
+(async () => {
+  const points = [];
+
+  points.push(await geocode(data.start));
+
+  for (let s of data.stops) {
+    points.push(await geocode(s));
+  }
+
+  points.push(await geocode(data.end));
+
+  // Mapa
+  const map = new SMap(JAK.gel("map"), points[0], 13);
+  map.addDefaultLayer(SMap.DEF_BASE).enable();
+  map.addDefaultControls();
+
+  // Trasa
+  const route = new SMap.Route(points, { geometry: true, criteria: "fast" });
+  route.compute().then(r => {
+    map.addLayer(r.getLayer()).enable();
+    map.setCenterZoom(r.getBounds().getCenter(), 12);
+  });
+})();
+</script>
+
+</body>
+</html>
